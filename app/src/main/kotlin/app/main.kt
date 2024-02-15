@@ -16,6 +16,7 @@ import kotlinx.html.button
 import kotlinx.html.classes
 import kotlinx.html.div
 import kotlinx.html.id
+import kotlinx.html.p
 import view.index
 
 fun main() {
@@ -58,19 +59,33 @@ fun Application.routes() {
 fun FlowContent.page() = div {
     div {
         id = "page"
-        classes = setOf("flex", "gap-4", "p-5", "flex-wrap")
-        button {
-            attributes["hx-post"] = "/craft"
-            attributes["hx-target"] = "#page"
-            attributes["hx-swap"] = "outerHTML"
+        classes = setOf("flex", "gap-4", "p-5")
 
-            classes = setOf("px-4", "py-2", "rounded-md", "bg-green-300", "w-32", "disabled:bg-neutral-500")
-            disabled = selected.size < 2
-            +"Craft"
+        div {
+            classes = setOf("flex", "gap-4", "p-5", "flex-wrap", "h-fit")
+            button {
+                attributes["hx-post"] = "/craft"
+                attributes["hx-target"] = "#page"
+                attributes["hx-swap"] = "outerHTML"
+
+                classes = setOf("px-4", "py-2", "rounded-md", "bg-green-300", "w-80", "disabled:bg-neutral-500")
+                disabled = selected.size < 2
+                +"Craft"
+            }
+
+            elements.mapIndexed { index, it ->
+                element(it, selected.contains(index), index, new == index)
+            }
+
         }
-
-        elements.mapIndexed { index, it ->
-            element(it, selected.contains(index), index)
+        div {
+            classes = setOf("max-w-lg")
+            logs.map {
+                p {
+                    classes = setOf("text-black", "bg-neutral-200", "rounded-lg", "p-4", "my-4")
+                    +it
+                }
+            }
         }
     }
 }
@@ -83,9 +98,15 @@ val elements = mutableListOf(
 )
 
 val selected = mutableListOf<Int>()
+var new: Int? = null
 
-fun FlowContent.element(element: Element, selected: Boolean, index: Int) = button {
-    classes = setOf("px-4", "py-2", "rounded-md", "w-32") + if (selected) "bg-blue-300" else "bg-neutral-300"
+fun FlowContent.element(element: Element, selected: Boolean, index: Int, new: Boolean) = button {
+    classes = setOf(
+        "px-4",
+        "py-2",
+        "rounded-md",
+        "w-80"
+    ) + if (selected) "bg-blue-300" else if (new) "bg-yellow-300" else "bg-neutral-300"
     attributes["hx-post"] = "/select/$index"
     attributes["hx-target"] = "#page"
     attributes["hx-swap"] = "outerHTML"
@@ -96,6 +117,15 @@ fun FlowContent.element(element: Element, selected: Boolean, index: Int) = butto
 data class Element(val icon: String, val name: String)
 
 fun craft() {
+    new = 0
+    val selectedElements = selected.map { elements[it] }
+    val result = createElement(selectedElements)
+    result.element?.let { element ->
+        if (elements.none { it.name == element.name })
+            elements.add(0, element)
+    }
+    logs.addAll(0, result.logs)
     selected.clear()
-    elements.add(0, Element("⭐️", "New"))
 }
+
+val logs = mutableListOf<String>()
